@@ -7,6 +7,7 @@ pipeline {
   }
   environment {
     COMPOSE_FILE = 'docker-compose.prod.yml'
+    COMPOSE_PROJECT_NAME = 'scoutline'
     IMAGE_TAG = "${env.GIT_COMMIT ?: 'local'}"
   }
   stages {
@@ -105,7 +106,7 @@ pipeline {
             # File credentials keep database, provider and Grafana values out
             # of SCM and image layers.
             install -m 600 "$BACKEND_ENV_FILE" backend/.env
-            docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --build
+            docker compose -p "$COMPOSE_PROJECT_NAME" --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --build
             APP_PORT="$(awk -F= '$1 == "APP_PORT" { print $2; exit }' "$COMPOSE_ENV_FILE")"
             : "${APP_PORT:=80}"
             timeout 120 sh -c 'until curl -fsS "http://127.0.0.1:$1/ready"; do sleep 5; done' _ "$APP_PORT"
@@ -118,7 +119,7 @@ pipeline {
   post {
     always {
       junit allowEmptyResults: true, testResults: 'backend/test-results.xml'
-      sh 'GRAFANA_ADMIN_PASSWORD=unused docker compose -f "$COMPOSE_FILE" ps || true'
+      sh 'GRAFANA_ADMIN_PASSWORD=unused docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" ps || true'
       deleteDir()
     }
   }
