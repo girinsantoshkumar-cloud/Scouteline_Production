@@ -99,13 +99,16 @@ pipeline {
       steps {
         withCredentials([
           file(credentialsId: 'SCOUTLINE_BACKEND_ENV', variable: 'BACKEND_ENV_FILE'),
-          string(credentialsId: 'GRAFANA_ADMIN_PASSWORD', variable: 'GRAFANA_ADMIN_PASSWORD')
+          file(credentialsId: 'SCOUTLINE_COMPOSE_ENV', variable: 'COMPOSE_ENV_FILE')
         ]) {
           sh '''
-            # File credentials keep database/provider values out of SCM and image layers.
+            # File credentials keep database, provider and Grafana values out
+            # of SCM and image layers.
             install -m 600 "$BACKEND_ENV_FILE" backend/.env
-            docker compose -f "$COMPOSE_FILE" up -d --build
-            timeout 120 sh -c 'until curl -fsS http://127.0.0.1:${APP_PORT:-80}/ready; do sleep 5; done'
+            docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up -d --build
+            APP_PORT="$(awk -F= '$1 == "APP_PORT" { print $2; exit }' "$COMPOSE_ENV_FILE")"
+            : "${APP_PORT:=80}"
+            timeout 120 sh -c 'until curl -fsS "http://127.0.0.1:$1/ready"; do sleep 5; done' _ "$APP_PORT"
             rm -f backend/.env
           '''
         }
