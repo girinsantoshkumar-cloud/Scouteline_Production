@@ -1,0 +1,47 @@
+services:
+  # Optional local PostgreSQL so the stack runs end-to-end without any external
+  # setup. To use Supabase instead, set DATABASE_URL in backend/.env to your
+  # Supabase connection string — no code or compose changes needed. If you only
+  # use Supabase, you can delete this "db" service and the backend depends_on.
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: scoutline
+    # Not published to the host to avoid clashing with any local Postgres on 5432.
+    # The backend reaches it over the compose network at host "db".
+    volumes:
+      - scoutline_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d scoutline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  scoutline_pgdata:
+

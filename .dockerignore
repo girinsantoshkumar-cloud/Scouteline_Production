@@ -1,0 +1,13 @@
+# Used by builds whose context is the repo root (frontend/Dockerfile.prod).
+.git
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.local-credentials
+**/__pycache__
+**/.pytest_cache
+**/.venv
+.venv-ci
+**/*.tsbuildinfo

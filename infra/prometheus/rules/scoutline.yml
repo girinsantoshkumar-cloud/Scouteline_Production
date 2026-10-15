@@ -1,0 +1,34 @@
+groups:
+  - name: scoutline-availability
+    rules:
+      - alert: ScoutlineBackendDown
+        expr: up{job="scoutline-backend"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Scoutline backend is down
+          description: Prometheus cannot scrape the backend metrics endpoint.
+
+      - alert: ScoutlineHighErrorRate
+        expr: sum(rate(http_requests_total{job="scoutline-backend",status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total{job="scoutline-backend"}[5m])), 0.001) > 0.05
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Scoutline 5xx error rate is above 5%
+          description: More than 5% of backend requests have failed for five minutes.
+
+      - alert: ScoutlineHighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket{job="scoutline-backend"}[5m])) by (le)) > 1.5
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Scoutline p95 latency is high
+          description: Backend p95 request latency has exceeded 1.5 seconds.
+
+      - alert: ScoutlineNodeExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Node exporter is down
+          description: Host-level CPU, memory, disk, and network metrics are unavailable.
