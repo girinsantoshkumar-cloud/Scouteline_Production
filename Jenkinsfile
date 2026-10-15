@@ -85,7 +85,17 @@ pipeline {
       }
     }
     stage('Deploy') {
-      when { branch 'main' }
+      // This job uses "Pipeline script from SCM", not a Multibranch Pipeline.
+      // In that job type Jenkins does not populate BRANCH_NAME, so compare the
+      // checked-out commit with origin/main explicitly.
+      when {
+        expression {
+          sh(
+            returnStatus: true,
+            script: 'test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/main)"'
+          ) == 0
+        }
+      }
       steps {
         withCredentials([
           file(credentialsId: 'SCOUTLINE_BACKEND_ENV', variable: 'BACKEND_ENV_FILE'),
