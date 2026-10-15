@@ -10,17 +10,20 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-# Set test environment BEFORE importing app modules
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5433/scoutline_test"
+# Set test environment BEFORE importing app modules. CI supplies a disposable
+# PostgreSQL container URL; the localhost default keeps standalone test runs
+# compatible with the documented developer setup.
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5433/scoutline_test",
+)
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["GROQ_API_KEY"] = ""
 os.environ["SERPAPI_KEY"] = ""
 os.environ["GITHUB_TOKEN"] = ""
 os.environ["AUTO_MIGRATE"] = "false"
 
 from main import app  # noqa: E402
-
-
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/scoutline_test"
 
 
 # Create tables synchronously before any async fixtures run

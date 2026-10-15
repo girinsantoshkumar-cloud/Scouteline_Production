@@ -33,6 +33,22 @@ pipeline {
     stage('Backend quality') {
       steps {
         sh '''
+          set -eu
+          # Run an isolated PostgreSQL instance alongside the Jenkins
+          # controller. Its Docker network is discovered at runtime so the
+          # tests do not depend on a database installed on the host.
+          CI_DB_NAME="scoutline-ci-db-${BUILD_NUMBER}"
+          CI_NETWORK="$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")"
+          test -n "$CI_NETWORK"
+          cleanup() { docker rm -f "$CI_DB_NAME" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker run -d --rm --name "$CI_DB_NAME" --network "$CI_NETWORK" \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=scoutline_test \
+            postgres:16-alpine >/dev/null
+          timeout 60 sh -c "until docker exec '$CI_DB_NAME' pg_isready -U postgres -d scoutline_test >/dev/null; do sleep 2; done"
+          export TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@${CI_DB_NAME}:5432/scoutline_test"
           python3 -m venv .venv-ci
           . .venv-ci/bin/activate
           pip install -q -r backend/requirements-dev.txt
