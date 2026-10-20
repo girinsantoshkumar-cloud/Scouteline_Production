@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /workspace/infra/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: scoutline-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: [127.0.0.1:8000]
+    relabel_configs:
+      - target_label: service
+        replacement: scoutline-backend
+
+
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]

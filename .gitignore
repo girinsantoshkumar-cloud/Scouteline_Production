@@ -54,3 +54,6 @@ coverage
 *.key
 *.crt
 test-results.xml
+.pgdata
+.tools
+.backend.log
