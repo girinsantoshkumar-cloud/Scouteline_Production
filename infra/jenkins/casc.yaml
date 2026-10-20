@@ -1,0 +1,35 @@
+jenkins:
+  systemMessage: "Scoutline local CI - pipeline job 'scoutline' is provisioned as code."
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: ${JENKINS_ADMIN_PASSWORD}
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      # Lets the local Prometheus scrape /prometheus/ without credentials.
+      # Jenkins is published on 127.0.0.1 only.
+      allowAnonymousRead: true
+unclassified:
+  location:
+    url: http://localhost:${JENKINS_PORT:-18081}/
+jobs:
+  - script: >
+      pipelineJob('scoutline') {
+        description('Scoutline CI/CD (Jenkinsfile from the local repository mounted at /repo)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('file:///repo') }
+                branches('*/' + System.getenv('LOCAL_BRANCH'))
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(false)
+          }
+        }
+        triggers { scm('H/2 * * * *') }
+      }

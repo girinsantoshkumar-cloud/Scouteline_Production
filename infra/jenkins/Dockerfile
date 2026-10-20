@@ -16,6 +16,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=docker-cli /usr/local/libexec/docker/cli-plugins/docker-compose /usr/local/libexec/docker/cli-plugins/docker-compose
+RUN git config --system --add safe.directory "*"
 USER jenkins
 
 RUN jenkins-plugin-cli --plugins \
@@ -24,4 +25,11 @@ RUN jenkins-plugin-cli --plugins \
     credentials-binding \
     junit \
     warnings-ng \
-    docker-workflow
+    docker-workflow \
+    configuration-as-code \
+    job-dsl \
+    prometheus
+
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/casc.yaml
+COPY --chown=jenkins:jenkins casc.yaml /usr/share/jenkins/casc.yaml

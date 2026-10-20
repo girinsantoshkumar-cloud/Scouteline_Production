@@ -87,6 +87,16 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      # Local mode: the repo and generated env files are mounted read-only so
+      # the pipeline needs no external Git remote or Jenkins credentials.
+      - ${LOCAL_REPO_DIR:-.}:/repo:ro
+      - ./.env:/local-config/compose.env:ro
+      - ./backend/.env:/local-config/backend.env:ro
+    environment:
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-change-me}
+      JENKINS_PORT: ${JENKINS_PORT:-8080}
+      LOCAL_BRANCH: ${LOCAL_BRANCH:-main}
+      LOCAL_DEPLOY: ${LOCAL_DEPLOY:-false}
     ports:
       - "127.0.0.1:${JENKINS_PORT:-8080}:8080"
       - "127.0.0.1:${JENKINS_AGENT_PORT:-50000}:50000"

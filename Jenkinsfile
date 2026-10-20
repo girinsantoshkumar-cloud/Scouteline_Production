@@ -91,6 +91,8 @@ pipeline {
       // checked-out commit with origin/main explicitly.
       when {
         expression {
+          // Local laptop mode: deploy whatever branch the local job builds.
+          if (env.LOCAL_DEPLOY == 'true') { return true }
           sh(
             returnStatus: true,
             script: 'test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/main)"'
@@ -98,6 +100,16 @@ pipeline {
         }
       }
       steps {
+        script {
+          if (env.LOCAL_DEPLOY == 'true') {
+            sh '''
+              set -eu
+              install -m 600 /local-config/backend.env backend/.env
+              docker compose -p "$COMPOSE_PROJECT_NAME" --env-file /local-config/compose.env -f "$COMPOSE_FILE" up -d --build
+              timeout 120 sh -c 'until curl -fsS http://frontend/ready; do sleep 5; done'
+              rm -f backend/.env
+            '''
+          } else {
         withCredentials([
           file(credentialsId: 'SCOUTLINE_BACKEND_ENV', variable: 'BACKEND_ENV_FILE'),
           file(credentialsId: 'SCOUTLINE_COMPOSE_ENV', variable: 'COMPOSE_ENV_FILE')
@@ -112,6 +124,8 @@ pipeline {
             timeout 120 sh -c 'until curl -fsS http://frontend/ready; do sleep 5; done'
             rm -f backend/.env
           '''
+        }
+          }
         }
       }
     }

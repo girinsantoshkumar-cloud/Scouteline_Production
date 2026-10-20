@@ -34,6 +34,8 @@ fi
 
 DB_PASS="$(openssl rand -hex 18)"
 GRAFANA_PASS="$(openssl rand -hex 18)"
+JENKINS_PASS="$(openssl rand -hex 12)"
+LOCAL_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 
 for port in "$APP_PORT" "$JENKINS_PORT" "$JENKINS_AGENT_PORT" "$PROMETHEUS_PORT" "$GRAFANA_PORT"; do
   if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(:|\\.)${port}$"; then
@@ -54,6 +56,10 @@ POSTGRES_DB=scoutline
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS
 GRAFANA_ROOT_URL=http://localhost:$GRAFANA_PORT
+JENKINS_ADMIN_PASSWORD=$JENKINS_PASS
+LOCAL_BRANCH=$LOCAL_BRANCH
+LOCAL_DEPLOY=true
+LOCAL_REPO_DIR=$ROOT
 EOF
 
 cat > backend/.env <<EOF
@@ -70,6 +76,9 @@ cat > .local-credentials <<EOF
 GRAFANA_URL=http://localhost:$GRAFANA_PORT
 GRAFANA_USER=admin
 GRAFANA_PASSWORD=$GRAFANA_PASS
+JENKINS_URL=http://localhost:$JENKINS_PORT
+JENKINS_USER=admin
+JENKINS_PASSWORD=$JENKINS_PASS
 POSTGRES_DATABASE=scoutline
 EOF
 chmod 600 .env backend/.env .local-credentials
@@ -100,7 +109,6 @@ echo "Jenkins:    http://localhost:$JENKINS_PORT"
 echo "Prometheus: http://localhost:$PROMETHEUS_PORT"
 echo "Grafana:    http://localhost:$GRAFANA_PORT"
 echo "Grafana login: admin / $GRAFANA_PASS"
-echo "Jenkins unlock password:"
-"${COMPOSE[@]}" exec -T jenkins cat /var/jenkins_home/secrets/initialAdminPassword || true
+echo "Jenkins login: admin / $JENKINS_PASS  (job 'scoutline' is pre-created; click Build Now)"
 echo
 echo "Credentials saved privately in: $ROOT/.local-credentials"
